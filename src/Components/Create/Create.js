@@ -1,8 +1,40 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useState, useContext } from 'react';
 import './Create.css';
 import Header from '../Header/Header';
+import { FirebaseContext, AuthContext } from '../../store/FirebaseContext';
+import { useHistory } from 'react-router-dom';
 
 const Create = () => {
+  const { firebase } = useContext(FirebaseContext);
+  const { user } = useContext(AuthContext);
+  const history = useHistory();
+
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [price, setPrice] = useState('');
+  const [image, setImage] = useState(null);
+  const date = new Date();
+  const handleSubmit = () => {
+    firebase
+      .storage()
+      .ref(`/image/${image.name}`)
+      .put(image)
+      .then((snapshot) => {
+        snapshot.ref.getDownloadURL().then((url) => {
+          console.log(url);
+          firebase.firestore().collection('products').add({
+            name,
+            category,
+            price,
+            url,
+            userId: user.uid,
+            createdAt: date.toDateString(),
+          });
+          history.push('/');
+        });
+      });
+  };
+
   return (
     <Fragment>
       <Header />
@@ -16,32 +48,69 @@ const Create = () => {
               type="text"
               id="fname"
               name="Name"
-              defaultValue="John"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
             />
             <br />
-            <label htmlFor="fname">Category</label>
+            <label htmlFor="category">Category</label>
             <br />
             <input
               className="input"
               type="text"
-              id="fname"
+              id="category"
               name="category"
-              defaultValue="John"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+              }}
             />
             <br />
-            <label htmlFor="fname">Price</label>
+            <label htmlFor="price">Price</label>
             <br />
-            <input className="input" type="number" id="fname" name="Price" />
+            <input
+              className="input"
+              type="number"
+              id="price"
+              name="Price"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+              }}
+            />
             <br />
           </form>
+
+          {/* image preview */}
           <br />
-          <img alt="Posts" width="200px" height="200px" src=""></img>
-          <form>
-            <br />
-            <input type="file" />
-            <br />
-            <button className="uploadBtn">upload and Submit</button>
-          </form>
+          {image && (
+            <img
+              alt="Posts"
+              width="200px"
+              height="200px"
+              src={image ? URL.createObjectURL(image) : ''}
+            ></img>
+          )}
+
+          {/* upload image */}
+          <br />
+          <input
+            onChange={(e) => {
+              setImage(e.target.files[0]);
+            }}
+            type="file"
+          />
+          <br />
+          {user ? (
+            <button className="uploadBtn" onClick={handleSubmit}>
+              upload and Submit
+            </button>
+          ) : (
+            <button onClick={() => history.push('/login')}>
+              click to Login
+            </button>
+          )}
         </div>
       </card>
     </Fragment>
